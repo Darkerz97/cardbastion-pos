@@ -2,20 +2,24 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
 function createWindow () {
+  console.log('Creando ventana...');
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 800,
+    height: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      nodeIntegration: true
     }
   });
 
   win.loadURL('http://localhost:5173');
+  win.webContents.on('did-finish-load', () => {
+    console.log('Ventana cargada');
+  });
 }
 
 app.whenReady().then(() => {
+  console.log('App lista');
   createWindow();
 
   app.on('activate', () => {
