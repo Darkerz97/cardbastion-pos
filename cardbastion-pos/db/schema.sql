@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY,
+  sku TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  price REAL NOT NULL,
+  stock INTEGER DEFAULT 0,
+  updated_at TEXT
+);

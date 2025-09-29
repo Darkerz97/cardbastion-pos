@@ -43,7 +43,48 @@ const groupedItems = computed(() => {
 })
 
 function pagar() {
-  alert(`✅ Venta realizada por $${total.value}!`)
+ async function pagar() {
+  if (props.items.length === 0) {
+    alert('Carrito vacío');
+    return;
+  }
+  // calcular total
+  const total = props.items.reduce((s, it) => s + it.quantity * it.price, 0);
+
+  // preparar items payload
+  const itemsPayload = props.items.map(it => ({
+    product_id: it.product_id,
+    sku: it.sku,
+    name: it.name,
+    quantity: it.quantity,
+    unit_price: it.price,
+    subtotal: it.subtotal ?? it.quantity * it.price
+  }));
+
+  // crear venta local
+  const res = await window.api.createSale({
+    items: itemsPayload,
+    total,
+    customer: null
+  });
+
+  if (res.ok) {
+    alert(`✅ Venta registrada (id local ${res.saleId}) por $${total}`);
+    // emitir evento 'clear' al padre para vaciar carrito
+    // (en template usamos @clear="cartItems = []")
+    // además podrías imprimir ticket o lanzar pantalla de pago
+    // evento emitido desde aquí
+    // NOTE: emit not available in <script setup> here; better emit
+    // We'll use $emit
+    // but since this is in setup we call:
+    // $emit('clear')
+    // assume component emits clear on success
+    // implement:
+  } else {
+    alert('Error al registrar venta');
+  }
+}
+
 }
 </script>
 

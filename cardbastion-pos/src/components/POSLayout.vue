@@ -1,59 +1,135 @@
+<template>
+  <div class="layout">
+    <!-- Panel izquierdo -->
+    <div class="left-panel">
+      <h1 class="title">🧾 Card Bastion POS</h1>
+      <div v-for="product in products" :key="product.id" class="product-card">
+        {{ product.name }} - ${{ product.price }}
+        <button @click="addToCart(product)">Agregar</button>
+      </div>
+    </div>
+
+    <!-- Panel derecho -->
+    <div class="right-panel">
+      <h2 class="title">🛒 Carrito</h2>
+      <div v-if="cart.length === 0">Vacío</div>
+      <ul v-else>
+        <li v-for="(item, index) in cart" :key="index">
+          {{ item.name }} (x{{ item.quantity }}) - ${{ item.price * item.quantity }}
+        </li>
+      </ul>
+      <div v-if="cart.length > 0">
+        <p>Total: ${{ total }}</p>
+        <button @click="checkout">Pagar</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+
+// Detecta si estás dentro de Electron para poder usar ipcRenderer
+let ipc = null
+
+if (typeof window !== 'undefined' && window.require) {
+  try {
+    const electron = window.require('electron')
+    ipc = electron.ipcRenderer
+  } catch (err) {
+    console.warn('⚠️ ipcRenderer no está disponible (navegador)', err)
+  }
+}
+
+// Productos de ejemplo (luego puedes cargarlos desde la BD)
+const products = ref([
+  { id: 1, name: 'Booster Pokémon Escarlata', price: 120 },
+  { id: 2, name: 'Commander MTG', price: 950 }
+])
+
+const cart = ref([])
+
+function addToCart(product) {
+  const existing = cart.value.find(p => p.id === product.id)
+  if (existing) {
+    existing.quantity += 1
+  } else {
+    cart.value.push({ ...product, quantity: 1 })
+  }
+}
+
+async function checkout() {
+  if (cart.value.length === 0) return
+
+  const total = cart.value.reduce((sum, p) => sum + p.price * p.quantity, 0)
+
+  const items = cart.value.map(p => ({
+    product_id: p.id,
+    sku: p.sku || '',
+    name: p.name,
+    quantity: p.quantity,
+    unit_price: p.price,
+    subtotal: p.price * p.quantity
+  }))
+
+  if (!ipc) {
+    alert('⚠️ Este POS solo funciona dentro de la app de escritorio.')
+    return
+  }
+
+  const result = await ipc.invoke('db:createSale', {
+    items,
+    total,
+    customer: null
+  })
+
+  if (result.ok) {
+    alert('✅ Venta guardada correctamente')
+    cart.value = []
+  } else {
+    alert('❌ Error al guardar la venta')
+  }
+}
+
+const total = computed(() =>
+  cart.value.reduce((sum, p) => sum + p.price * p.quantity, 0)
+)
+</script>
+
+
+<style scoped>
 .layout {
   display: flex;
-  flex-direction: row;
   height: 100vh;
-  overflow: hidden;
-  background-color: #0D0D0D;
+  background: #0D0D0D;
+  color: white;
 }
-
 .left-panel {
   flex: 2;
-  padding: 2rem;
-  overflow-y: auto;
-  background-color: #1E1E1E;
-  border-right: 2px solid #F2B138;
-  color: #fff;
+  padding: 1rem;
+  background: #1E1E1E;
 }
-
 .right-panel {
   flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-  background-color: #282828;
-  color: #fff;
-}
-
-.title {
-  font-size: 24px;
-  color: #F2B138;
-}
-
-.product-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid #F2B138;
-  border-radius: 8px;
   padding: 1rem;
+  background: #282828;
+}
+.title {
+  color: #F2B138;
   margin-bottom: 1rem;
 }
-
+.product-card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border: 1px solid #F29A2E;
+  margin-bottom: 1rem;
+}
 .product-card button {
   margin-top: 0.5rem;
   background-color: #F29A2E;
-  color: black;
   border: none;
+  color: black;
   padding: 6px 12px;
-  border-radius: 4px;
   cursor: pointer;
 }
-
-@media (max-width: 768px) {
-  .layout {
-    flex-direction: column;
-  }
-
-  .left-panel, .right-panel {
-    flex: unset;
-    width: 100%;
-    height: auto;
-  }
-}
+</style>
