@@ -10,3 +10,5 @@ contextBridge.exposeInMainWorld('api', {
   markSaleSynced: (info) => ipcRenderer.invoke('db:markSaleSynced', info),
   uploadPendingSales: (opts) => ipcRenderer.invoke('sync:uploadPendingSales', opts),
 });
+
+console.log('✅ preload.js ejecutado');

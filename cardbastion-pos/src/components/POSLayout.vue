@@ -1,5 +1,14 @@
 <template>
-  <div class="layout">
+  <!-- o bien haz que se active al hacer clic en cualquier parte -->
+  <div class="layout" @click="focusScanner">
+    <input
+    ref="scannerInput"
+    v-model="scanBuffer"
+    @keydown.enter="onScanned"
+    class="scanner-input"
+    />
+
+
     <!-- Panel izquierdo -->
     <div class="left-panel">
       <h1 class="title">🧾 Card Bastion POS</h1>
@@ -27,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 // Detecta si estás dentro de Electron para poder usar ipcRenderer
 let ipc = null
@@ -94,6 +103,44 @@ async function checkout() {
 const total = computed(() =>
   cart.value.reduce((sum, p) => sum + p.price * p.quantity, 0)
 )
+
+const scanBuffer = ref('')
+const scannerInput = ref(null)
+
+function focusScanner() {
+  scannerInput.value?.focus()
+}
+
+onMounted(() => {
+  focusScanner()
+})
+
+// función que se ejecuta al presionar ENTER (después de escanear)
+async function onScanned() {
+   console.log('↩️ Enter presionado:', scanBuffer.value)
+  const code = scanBuffer.value.trim()
+  if (!code) return
+
+  const product = await window.api.findProductBySku(code)
+
+  if (product) {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      price: product.price,
+      quantity: 1,
+      unit_price: product.price,
+      subtotal: product.price
+    })
+  } else {
+    alert('Producto no encontrado: ' + code)
+  }
+
+  scanBuffer.value = ''
+  focusScanner()
+}
+
 </script>
 
 
@@ -132,4 +179,10 @@ const total = computed(() =>
   padding: 6px 12px;
   cursor: pointer;
 }
+
+.scanner-input {
+    position: static;
+  margin-bottom: 1rem;
+}
+
 </style>
